@@ -1,0 +1,4 @@
+#set math.mat(delim: "[")
+#set math.equation(block: true)
+
+Curvature of 
