@@ -3,6 +3,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.sparse import coo_array, diags
 from scipy.linalg import solve_circulant
+import warnings
+
+
 
 # compute mean of y by grouped x by 
 # first converting to pandas (unaccountably fast)
@@ -40,13 +43,24 @@ def get_group_mean(y, x, method = 'pd'):
      elif method == 'np': 
          return group_mean_np(y, x)
      else: 
-         raise ValueError('method ' + method + ' not found')
+         raise ValueError(f'method {method} not found')
 
 
-    # H: seasonal length
-    # c_h: penalty for concavity in trend of contiguous values (gap 1)
-    # c_d: penalty for concavity in seasonal trend (gap H)
-class CyclicSpline: 
+
+class CyclicSpline:
+    """
+    Class to estimate a smoothing spline model for seasonality in time series with one seasonal cycle. 
+    One parameter for each period (e.g. hour of year for hourly data), with penalties for concavity in the 
+    trend between contiguous values and another for concavity in the seasonal trend. 
+
+    For simplicity, the estimation procedure first computes the mean of the series for each period. This 
+    simplifies the computations but comes at the cost of accuracy if some periods occur more often than others in the data
+
+    arguments:
+        H (int): length of seasonal period
+        c_h (float): penalty for concavity in contiguous values (i.e. between immediate neighbors)
+        c_d (float): penalty for concavity in seasonal trend (i.e. from one point in current cycle to same point in the next, at offset of H)
+    """
     def __init__(self, H, c_h = None, c_d = None):
         self.H = H
         self.c_h = c_h
@@ -54,9 +68,13 @@ class CyclicSpline:
     def fit(self, x, y, H = None, c_h = None, c_d = None): 
         self.x = x
         self.y = y
-        if c_h is not None: 
+        if c_h is not None:
+            if self.c_h is not None:
+                warnings.warn(f'CyclicSpline object already has attribute c_h with value {self.c_h}. This will be overwritten to {c_h}')
             self.c_h = c_h
-        if c_d is not None: 
+        if c_d is not None:
+            if self.c_d is not None:
+                warnings.warn(f'CyclicSpline object already has attribute c_d with value {self.c_d}. This will be overwritten to {c_d}')
             self.c_d = c_d
         if H is not None: 
             self.H = H
@@ -72,7 +90,7 @@ class CyclicSpline:
         xx_diag = coo_array(([1], ([0], [0])), shape = (n,1))
 
         # compile all coefficients 
-        c = (c_h*penalty_hour + c_d*penalty_day + xx_diag).toarray().reshape(-1)
+        c = (self.c_h*penalty_hour + self.c_d*penalty_day + xx_diag).toarray().reshape(-1)
 
         x = solve_circulant(c, m)
         self.m = m
@@ -81,7 +99,7 @@ class CyclicSpline:
         return x
     def fit_plot(self, downsample = True, alpha = 0.6): 
     # demand appears to have trough at 10:00 and peak at 22:00 (UTC)
-        if downsample == True:
+        if downsample:
             idx = (self.x_unique % 24 == 10) | (self.x_unique % 24 == 22)
         else: 
             idx = np.tile(True, len(self.x_unique))
@@ -100,7 +118,24 @@ class CyclicSpline:
         plt.ylabel('megawatthours')
         plt.show()
     def predict(self, xnew): 
-        if 'x_unique' not in dir(self): 
-            raise Exception('Fitted values not found')
+        if not hasattr(self, 'x_unique'):
+            raise AttributeError('Fitted values not found')
         fitted_dict = dict(zip(self.x_unique, self.fitted))
         return np.array([fitted_dict[xx] for xx in xnew])
+    
+
+class MovingAverage:
+    def __init__(self, k):
+        self.k = k
+        #self.n_l = n_l
+    def __call__(self, Y):
+        if isinstance(Y, (pd.Series, pd.DataFrame)):
+            Y = np.array(Y).reshape(-1)         
+        m = np.empty(Y.shape[0])
+        m[0:(self.k // 2 + 1)] = np.nan
+        m[-((self.k+1) // 2):] = np.nan
+        for i in range((self.k//2 + 1), Y.shape[0]-(self.k+1) // 2):
+            m[i] = Y[i:(i+self.k)].mean()
+        return m
+    
+# why does the STL algorithm take multiple moving averages? 
