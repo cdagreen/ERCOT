@@ -38,7 +38,7 @@ df_demand_full = pd.concat(
 )
 
 date_str = datetime.datetime.now().strftime('%Y_%m_%d')
-df_demand_full.to_csv('data/demand_full_' + date_str + '.csv')
+df_demand_full.to_csv('data/demand_full_' + date_str + '.csv', index=False)
 
 # check for gaps
 time_diffs = np.array([(df_demand_full['period_dt'].iloc[i+1]-df_demand_full['period_dt'].iloc[i]).total_seconds() / (60**2)  for i in range(df_demand_full.shape[0]-1)])

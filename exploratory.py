@@ -1,6 +1,4 @@
 ################## Functions for exploratory analysis ##################
-
-################## Functions for exploratory analysis ##################
 #import requests
 import pandas as pd
 import numpy as np
@@ -14,7 +12,7 @@ from statsmodels.api import OLS
 def sine_scaled(x, b):
     return math.sin((2*math.pi*x)/b)
 
-def cos_translated(x, a = 0, b = 1): 
+def cos_translated(x, a=0, b=1): 
     return math.cos(2*math.pi*(x-a)/b)
 
 #get the first of the month as a date 
@@ -24,7 +22,7 @@ def first_of_month(dt_):
 #identify the date where df['value'] achieves its maximum 
 def where_max(df): 
     val_max = df['value'].max()
-    date_max = df.loc[df['value']== val_max, 'date'].values[0]
+    date_max = df.loc[df['value'] == val_max, 'date'].values[0]
     return date_max
 
 def hour_of_year(date_): 
@@ -46,7 +44,7 @@ def modify_data_demand(df):
     df['sine_365'] = df['day_of_year'].apply(lambda x: sine_scaled(x, 365.25))
     return df
 
-def ercot_data(path_demand): 
+def ercot_data_from_csv(path_demand): 
     """
     Load the full demand dataset from retrieve_ercot_data and add various variables. 
     Fill in missing values for the variable 'value' with the most recent non-missing
@@ -83,12 +81,38 @@ def ercot_data(path_demand):
 
     return df_demand
 
-
-
+class DemandData:
+    def __init__(self, data_=None, path_demand=None):
+        if data_ is None:
+            if path_demand is not None:
+                data_ = ercot_data_from_csv(path_demand)
+            else:
+                raise ValueError('One of data_ or path_load must be provided.')
+        self.data = data_
+    def __call__(self):
+        return self.data
+    def query(self, query_str, inplace=False):
+        data = self.data.query(query_str).reset_index(drop=True)
+        if inplace:
+            self.data = data
+        else:
+            return DemandData(data_=data)
+    def window_datetime(self, datetime_begin, datetime_end, return_object=False):
+        df_window = (
+            self.data
+                .query('period_dt >= @datetime_begin')
+                .query('period_dt <= @datetime_end')
+                .reset_index(drop=True)
+        )
+        if return_object:
+            return DemandData(df_window)
+        else:
+            return df_window
+        
 def fill_na_168hr(df):
     """
     Replace missing values with value from one week earlier, and create 
-    an indicator 'value_was_na' for periods whose values were originationally missing.
+    an indicator 'value_was_na' for periods whose values were originally missing.
     Alternative to the methodology in ercot_data()
     """
     df['value_lag168'] = df['value'].shift(168)
