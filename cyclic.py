@@ -162,12 +162,12 @@ class Decomposition:
         low_pass (function or callable object): function for removing trend from seasonal (is this necessary? STL is different)
         p (int): number of iterations
     """
-    def __init__(self, trend, seasonal, low_pass, p):
+    def __init__(self, trend, seasonal, low_pass, eps=1E-04):
         self.trend = trend
         self.seasonal = seasonal
         self.low_pass = low_pass
         self.center_mask = None
-        self.p = p
+        self.eps=eps
     def iteration(self, X, Y, Yt=None):
         if Yt is None:
             Rl = Y - self.low_pass(Y)
@@ -181,11 +181,23 @@ class Decomposition:
         Yt = self.trend(Rs)
         return Ys, Yt, results_seasonal
     def fit(self, X, Y):
+        if isinstance(X, (pd.Series, pd.DataFrame)):
+            X = X.values
+        if isinstance(Y, (pd.Series, pd.DataFrame)):
+            Y = Y.values
         seasonals = []
         Yt = np.zeros_like(Y)
-        for _ in range(self.p):
+        Ys = np.zeros_like(Y)
+        cnt = 0
+        ym = Y.mean()
+        self.center_mask = None
+        while (cnt == 0) or (np.max(np.abs((Ys-Ys_prev)))/ym > self.eps) or (np.max(np.abs((Yt-Yt_prev)))/ym > self.eps): 
+            Yt_prev = Yt
+            Ys_prev = Ys
             (Ys, Yt, results_seasonal) = self.iteration(X, Y, Yt)
             seasonals.append(Ys)
+            cnt += 1
+        print(f'Decomposition converged after {cnt} iterations')
         return DecompositionResults(results_seasonal, Ys, Yt, X[-1], seasonals)
 
 class DecompositionResults:
@@ -200,9 +212,9 @@ class DecompositionResults:
     
 
 class DecompositionCyclicSpline(Decomposition):
-    def __init__(self, H, c_h, c_d, n, p):
+    def __init__(self, H, c_h, c_d, n):
         trend_ma = MovingAverage(int(np.round(1.5*n)))
-        spline = CyclicSpline(H, c_h, c_d, p)
+        spline = CyclicSpline(H, c_h, c_d)
         low_pass = MovingAverage(n)
         super().__init__(trend_ma, spline, low_pass)
     
@@ -219,8 +231,8 @@ class DecompositionTrend:
     def __init__(self, model_seasonal, model_trend):
         self.model_seasonal = model_seasonal
         self.model_trend = model_trend
-    def fit(self, X, Y, p):
-        results_seasonal = self.model_seasonal.fit(X, Y, p)
+    def fit(self, X, Y):
+        results_seasonal = self.model_seasonal.fit(X, Y)
         Yr = Y - results_seasonal.fitted_values_seasonal
         results_trend = self.model_trend.fit(Yr)
         return DecompositionTrendResults(results_seasonal, results_trend)

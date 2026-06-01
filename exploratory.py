@@ -8,6 +8,7 @@ import os
 import datetime
 import math
 from statsmodels.api import OLS
+from zoneinfo import ZoneInfo
 
 def sine_scaled(x, b):
     return math.sin((2*math.pi*x)/b)
@@ -26,23 +27,23 @@ def where_max(df):
     return date_max
 
 def hour_of_year(date_): 
-    diff = date_ - datetime.datetime(date_.year, 1, 1, 0, 0)
+    diff = date_ - datetime.datetime(date_.year, 1, 1, 0, 0, tzinfo=ZoneInfo("America/Chicago"))
     return diff.total_seconds() / (60*60)
 
-def modify_data_demand(df): 
-    """
-    Add various variables to the data set.
-    """
-    df['period_dt'] = pd.to_datetime(df['period_dt'])
-    #df_demand['date'] = pd.to_datetime(df_demand['date']).dt.floor('D')
-    df['date'] = df['period_dt'].dt.floor('D')
-    df['hour'] = df['period_dt'].dt.floor('h')
-    df['month'] = df['date'].dt.month
-    df['year'] = df['date'].dt.year
-    df['hour_of_day'] = df['hour'].dt.hour
-    df['day_of_year'] = df['date'].dt.dayofyear
-    df['sine_365'] = df['day_of_year'].apply(lambda x: sine_scaled(x, 365.25))
-    return df
+# def modify_data_demand(df): 
+#     """
+#     Add various variables to the data set.
+#     """
+#     df['period_dt'] = pd.to_datetime(df['period_dt'], utc=True)
+#     #df_demand['date'] = pd.to_datetime(df_demand['date']).dt.floor('D')
+#     df['date'] = df['period_dt'].dt.floor('D')
+#     df['hour'] = df['period_dt'].dt.floor('h')
+#     df['month'] = df['date'].dt.month
+#     df['year'] = df['date'].dt.year
+#     df['hour_of_day'] = df['hour'].dt.hour
+#     df['day_of_year'] = df['date'].dt.dayofyear
+#     df['sine_365'] = df['day_of_year'].apply(lambda x: sine_scaled(x, 365.25))
+#     return df
 
 def ercot_data_from_csv(path_demand): 
     """
@@ -51,7 +52,7 @@ def ercot_data_from_csv(path_demand):
     value from the same day of the week and hour
     """
     df_demand = pd.read_csv(path_demand)
-    df_demand['period_dt'] = pd.to_datetime(df_demand['period_dt'])
+    df_demand['period_dt'] = pd.to_datetime(df_demand['period_dt'], utc=True).dt.tz_convert('America/Chicago')
     # make sure that data are sorted chronologically
     df_demand = df_demand.sort_values('period_dt').reset_index(drop=True)
 
