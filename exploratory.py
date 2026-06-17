@@ -53,6 +53,7 @@ def ercot_data_from_csv(path_demand):
     """
     df_demand = pd.read_csv(path_demand)
     df_demand['period_dt'] = pd.to_datetime(df_demand['period_dt'], utc=True).dt.tz_convert('America/Chicago')
+    df_demand['date'] = pd.to_datetime(df_demand['date'], utc=True).dt.tz_convert('America/Chicago')
     # make sure that data are sorted chronologically
     df_demand = df_demand.sort_values('period_dt').reset_index(drop=True)
 
@@ -127,7 +128,7 @@ def plot_daily_end(df_daily):
     plt.plot(df_daily_end['date'], 
         df_daily_end['value']/1000)
     plt.xticks(ticks = df_daily_end['date'][(np.arange(df_daily_end.shape[0])%3)==0], 
-          labels = df_daily_end['date'][(np.arange(df_daily_end.shape[0])%3)==0].dt.strftime('%m/%d'),
+          labels = pd.to_datetime(df_daily_end['date'])[(np.arange(df_daily_end.shape[0])%3)==0].dt.strftime('%m/%d'),
           rotation = 45, 
           size = 8)
     plt.ylabel('GWh')
@@ -143,6 +144,7 @@ def plot_monthly_years(df_monthly):
     plt.xticks(ticks=list(range(1,13)), 
                labels = list(range(1,13)))
     plt.grid(True, color='grey')
+    plt.xlabel('month')
     plt.ylabel('GWh / day')
     plt.legend(loc='upper right')
     plt.show()
