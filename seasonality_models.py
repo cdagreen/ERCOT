@@ -152,9 +152,10 @@ df_demand = (
         .assign(curvature_demean = lambda x: x['curvature'] - x['curvature'].mean())
 )
 
-temp = (df_demand[d:-d]   
-    .groupby('hour_of_year')
-    .agg({'curvature_demean': lambda x: (x.sum()**2 - np.sum(x**2))/2})
+temp = (
+    df_demand[d:-d]   
+        .groupby('hour_of_year')
+        .agg({'curvature_demean': lambda x: (x.sum()**2 - np.sum(x**2))/2})
 )
 
 (temp['curvature_demean'] > 0).value_counts()
@@ -281,7 +282,6 @@ for _ in range(10000):
 
 np.mean(variances)
 np.std(variances)
-
 
 ### variance of hour-of-day effects
 # the effect of daylight savings time should be negligible since only correlations at 24-hour lags are considered
