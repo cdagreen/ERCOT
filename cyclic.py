@@ -269,5 +269,10 @@ class DecompositionTrendResults:
         predicted = predicted_seasonal + predicted_trend
         return predicted, predicted_seasonal, predicted_trend
     
+# Fixed hour-of-year effects, or varying?
+    # penalize drift? estimate degree of drift?
 
+# estimation of day effects and 
+
+class 
 
