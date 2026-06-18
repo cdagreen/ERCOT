@@ -14,7 +14,7 @@ Includes exploratory analysis of annual, weekly, and intraday seasonality, as we
 
 **exploratory.py** provides tools for exploratory analysis (data loading, plotting, etc.)
 
-**exploraroty.ipynb** contains the main exploratory analysis. 
+**exploratory.ipynb** contains the main exploratory analysis. 
 
 ## Modeling
 
